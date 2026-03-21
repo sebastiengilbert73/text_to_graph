@@ -1,0 +1,8 @@
+streamlit
+requests
+pypdf
+python-docx
+beautifulsoup4
+streamlit-agraph
+pydantic
+langdetect
