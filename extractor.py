@@ -1,4 +1,6 @@
 import io
+import zipfile
+import xml.etree.ElementTree as ET
 import requests
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
@@ -24,6 +26,8 @@ def extract_text(file_obj=None, file_name="", url=""):
             return extract_from_pdf(file_obj)
         elif ext in ["doc", "docx"]:
             return extract_from_docx(file_obj)
+        elif ext == "odt":
+            return extract_from_odt(file_obj)
         else:
             raise ValueError(f"Unsupported file extension: {ext}")
     return ""
@@ -76,3 +80,18 @@ def extract_from_docx(file_obj):
         return "\n".join([para.text for para in doc.paragraphs])
     except Exception as e:
         raise Exception(f"Error extracting from DOCX: {e}")
+
+def extract_from_odt(file_obj):
+    try:
+        with zipfile.ZipFile(file_obj) as zf:
+            with zf.open("content.xml") as content_file:
+                tree = ET.parse(content_file)
+                root = tree.getroot()
+                
+                text_content = []
+                for elem in root.iter():
+                    if elem.tag.endswith('}p') or elem.tag.endswith('}h'):
+                        text_content.append("".join(elem.itertext()))
+                return "\n".join(text_content)
+    except Exception as e:
+        raise Exception(f"Error extracting from ODT: {e}")

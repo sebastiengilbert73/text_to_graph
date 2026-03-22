@@ -136,7 +136,7 @@ def main():
     text_content = ""
     
     if input_type == "File Upload":
-        uploaded_file = st.file_uploader("Upload a document", type=["txt", "pdf", "docx", "doc"])
+        uploaded_file = st.file_uploader("Upload a document", type=["txt", "pdf", "docx", "doc", "odt"])
         if uploaded_file is not None:
             with st.spinner("Extracting text..."):
                 try:
