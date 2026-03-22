@@ -1,8 +1,20 @@
 import json
 import requests
+import logging
 from pydantic import BaseModel, Field
 from typing import List
 from langdetect import detect, DetectorFactory
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[
+        logging.FileHandler("llm_interactions.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # To ensure consistent language detection
 DetectorFactory.seed = 0
@@ -73,12 +85,20 @@ Ensure the JSON is perfectly formatted. Do not include markdown blocks or other 
 
     endpoint = f"{server_url}/api/chat"
     
+    logger.info("=== Sending Request to LLM ===")
+    logger.info(f"System Prompt:\n{system_prompt}")
+    logger.info(f"User Prompt:\n{user_prompt}")
+    
     try:
         response = requests.post(endpoint, json=payload, timeout=60)
         response.raise_for_status()
         data = response.json()
         
         reply_content = data.get("message", {}).get("content", "")
+        
+        logger.info("=== Received Response from LLM ===")
+        logger.info(f"Response Content:\n{reply_content}")
+        
         # Parse output
         try:
             graph_json = json.loads(reply_content)
