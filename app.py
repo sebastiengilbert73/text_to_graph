@@ -2,8 +2,21 @@ import streamlit as st
 import requests
 import json
 import os
+import logging
 from extractor import extract_text
 from llm_graph import generate_graph_from_text
+
+# Configure application logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[
+        logging.FileHandler("app.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ],
+    force=True
+)
+logger = logging.getLogger(__name__)
 
 try:
     from streamlit_agraph import agraph, Node, Edge, Config
@@ -157,10 +170,15 @@ def main():
     else:
         url_input = st.text_input("Enter URL")
         if url_input:
+            logger.info(f"User requested URL extraction for: {url_input}")
             with st.spinner("Extracting text from URL..."):
                 try:
                     text_content = extract_text(url=url_input)
+                    if not text_content:
+                        logger.warning(f"Extracted completely empty text from {url_input}")
+                        st.warning(f"No text could be extracted from {url_input}. The site might be heavily JavaScript-rendered or protected. Check app.log for details.")
                 except Exception as e:
+                    logger.error(f"Error in UI during URL extraction: {e}")
                     st.error(f"Error extracting URL: {e}")
 
     if text_content:
