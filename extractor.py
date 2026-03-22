@@ -53,6 +53,10 @@ def extract_from_url(url):
         text = '\n'.join(line for line in lines if line)
         
         return text
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code in (401, 403, 406):
+            raise Exception("This website actively blocks automated content extraction. Please try a different URL or save the page as a text/PDF file and upload it instead.")
+        raise Exception(f"Network error extracting from URL: {e}")
     except Exception as e:
         raise Exception(f"Error extracting from URL: {e}")
 
