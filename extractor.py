@@ -83,10 +83,45 @@ def extract_from_pdf(file_obj):
         reader = PdfReader(file_obj)
         text = ""
         for page in reader.pages:
-            text += page.extract_text() + "\n"
+            extracted = page.extract_text()
+            if extracted:
+                text += extracted + "\n"
+                
+        # If no text was found, it's likely a scanned image PDF. Fallback to OCR.
+        if not text.strip():
+            logger.info("pypdf extracted empty text. Attempting OCR...")
+            file_obj.seek(0) # Reset file pointer for the next library
+            text = extract_from_pdf_ocr(file_obj)
+            
         return text
     except Exception as e:
         raise Exception(f"Error extracting from PDF: {e}")
+
+def extract_from_pdf_ocr(file_obj):
+    try:
+        import fitz  # PyMuPDF
+        import pytesseract
+        from PIL import Image
+        import io
+        
+        pdf_bytes = file_obj.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        text = ""
+        for page in doc:
+            pix = page.get_pixmap(dpi=150) # 150 DPI is usually good enough for OCR and fast
+            img_bytes = pix.tobytes("png")
+            img = Image.open(io.BytesIO(img_bytes))
+            page_text = pytesseract.image_to_string(img)
+            text += page_text + "\n"
+        return text
+    except ImportError as e:
+        logger.warning(f"Missing OCR dependency: {e}")
+        raise Exception("PDF appears to be scanned, but OCR libraries (PyMuPDF, pytesseract, Pillow) are missing. Please install them.")
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "tesseract is not installed" in err_msg or "tesseract_cmd" in err_msg or "o file or directory" in err_msg:
+            raise Exception("Tesseract OCR is not installed or not in your system PATH. On Windows, please download and install it from: https://github.com/UB-Mannheim/tesseract/wiki")
+        raise Exception(f"OCR failed: {e}")
 
 def extract_from_docx(file_obj):
     try:
