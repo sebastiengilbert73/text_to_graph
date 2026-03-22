@@ -59,6 +59,12 @@ def render_graph_from_json(graph_json):
     nodes = []
     edges = []
     
+    node_colors = [
+        "#5D6D7E", "#5499C7", "#48C9B0", "#52BE80", 
+        "#AF7AC5", "#EB984E", "#EC7063", "#5DADE2",
+        "#45B39D", "#99A3A4", "#D2B4DE", "#F4D03F"
+    ]
+
     # Create nodes
     for node_data in graph_json.get("nodes", []):
         node_id = str(node_data.get("id", ""))
@@ -66,10 +72,15 @@ def render_graph_from_json(graph_json):
         is_source = node_data.get("is_source", False)
         
         # Distinctive color and slightly larger size for the source node
-        color = "#FF4B4B" if is_source else "#1f77b4"
+        if is_source:
+            color = "#FF0000" # Bright red
+        else:
+            color_idx = sum(ord(c) for c in node_id) % len(node_colors)
+            color = node_colors[color_idx]
+            
         size = 35 if is_source else 25
         
-        nodes.append(Node(id=node_id, label=node_label, size=size, shape="dot", color=color))
+        nodes.append(Node(id=node_id, label=node_label, size=size, shape="dot", color=color, font={'color': color}))
     
     # Create edges
     for edge_data in graph_json.get("edges", []):
