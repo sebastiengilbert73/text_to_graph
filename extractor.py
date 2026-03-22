@@ -2,9 +2,12 @@ import io
 import zipfile
 import xml.etree.ElementTree as ET
 import requests
+import logging
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 from docx import Document
+
+logger = logging.getLogger(__name__)
 
 def extract_text(file_obj=None, file_name="", url=""):
     """
@@ -33,10 +36,13 @@ def extract_text(file_obj=None, file_name="", url=""):
     return ""
 
 def extract_from_url(url):
+    logger.info(f"Attempting to extract text from URL: {url}")
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
         response = requests.get(url, headers=headers, timeout=10)
+        logger.info(f"URL Request returned status code: {response.status_code}")
         response.raise_for_status()
+        
         soup = BeautifulSoup(response.content, "html.parser")
         
         # Remove noisy elements
@@ -47,8 +53,10 @@ def extract_from_url(url):
         target = soup.find('article') or soup.find('main') or soup.find('body')
         
         if target:
+            logger.info(f"Found target extraction tag: <{target.name}>")
             text = target.get_text(separator=' ')
         else:
+            logger.warning("No <article>, <main>, or <body> tag found, falling back to full soup text.")
             text = soup.get_text(separator=' ')
             
         # Break into lines and remove leading/trailing space
@@ -56,12 +64,18 @@ def extract_from_url(url):
         # Drop blank lines
         text = '\n'.join(line for line in lines if line)
         
+        logger.info(f"Successfully extracted {len(text)} characters of text from URL.")
+        if len(text) == 0:
+            logger.warning(f"Extraction returned an empty string for URL: {url}. It's possible the content is heavily JavaScript-rendered or protected.")
+            
         return text
     except requests.exceptions.HTTPError as e:
+        logger.error(f"HTTPError for URL {url}: {e.response.status_code} - {e.response.reason}")
         if e.response.status_code in (401, 403, 406):
             raise Exception("This website actively blocks automated content extraction. Please try a different URL or save the page as a text/PDF file and upload it instead.")
         raise Exception(f"Network error extracting from URL: {e}")
     except Exception as e:
+        logger.error(f"Error extracting from URL {url}: {e}", exc_info=True)
         raise Exception(f"Error extracting from URL: {e}")
 
 def extract_from_pdf(file_obj):
